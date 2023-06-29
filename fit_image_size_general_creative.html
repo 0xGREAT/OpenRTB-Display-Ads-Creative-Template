@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <style>
+    * {
+      margin: 0;
+      padding: 0
+    }
+
+    .container {
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0);
+      cursor: pointer;
+    }
+
+    #ad-img {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+  </div>
+  <script>
+    window._track_impression_ = '{{.Impression_tracking_url_1}}';
+    window._track_click_ = '{{.Click_Tracking_Url_Array}}';
+    window._landing_url_ = '{{.Landing_Page_URL_Deeplink}}';
+    window._fallback_url_ = '{{.Landing_Page_Fallback_URL_without_Deeplink}}';
+    window._image_url_ = '{{{.uploaded_creative_image_URL}}}';
+    window.TOUCH_MISTAKEN_DISTANCE = 300;
+  </script>
+  <script>
+    function isValidClick(args) {
+      var TOUCH_MISTAKEN_DISTANCE = Number(window.TOUCH_MISTAKEN_DISTANCE);
+      return (
+        Math.abs(args.up_x - args.down_x) < TOUCH_MISTAKEN_DISTANCE &&
+        Math.abs(args.up_y - args.down_y) < TOUCH_MISTAKEN_DISTANCE
+      );
+    }
+
+    function bindTouchEvent(brickElement, callback) {
+      var clickInfo = {};
+      brickElement.addEventListener("touchstart", function (e) {
+        e.stopPropagation();
+        var touch = e.touches[0];
+        clickInfo.down_x = touch.clientX;
+        clickInfo.down_y = touch.clientY;
+      });
+      brickElement.addEventListener("touchend", function (e) {
+        e.stopPropagation();
+        var touch = e.changedTouches[0];
+        clickInfo.up_x = touch.clientX;
+        clickInfo.up_y = touch.clientY;
+        if (isValidClick(clickInfo)) {
+          callback();
+        }
+      });
+
+      brickElement.addEventListener("touchcancel", function (e) {
+        e.stopPropagation();
+        var touch = e.changedTouches[0];
+        clickInfo.up_x = touch.clientX;
+        clickInfo.up_y = touch.clientY;
+        if (isValidClick(clickInfo)) {
+          callback();
+        }
+      });
+    }
+
+    function removeTouchListener(element, callback) {
+      element.removeEventListener(callback)
+    }
+
+    function tracking(url) {
+      if (!url) {
+        return;
+      }
+      try {
+        var img = new Image();
+        img.src = url;
+      } catch (error) {}
+    }
+
+    function clickTracks() {
+      var urls = window._track_click_;
+      urls = urls.split(",");
+      for (var i = 0; i < urls.length; i++) {
+        tracking(urls[i]);
+      }
+    }
+
+    function impTracks() {
+      var urls = window._track_impression_;
+      urls = urls.split(",");
+      for (var i = 0; i < urls.length; i++) {
+        tracking(urls[i]);
+      }
+    }
+
+    function imageLoader(url, callbacks) {
+      var img = new Image();
+      img.src = url;
+      img.onload = function () {
+        callbacks && callbacks();
+      };
+      img.onerror = function () {};
+      return img;
+    }
+
+    function landing() {
+      var landingUrl = window._landing_url_;
+      var fallbackUrl = window._fallback_url_;
+
+      // fallbackUrl replaced
+      if (fallbackUrl != '{{' + '.Landing_Page_Fallback_URL_without_Deeplink' + '}}' && fallbackUrl != '') {
+        // Deep link to your app goes here
+        const ifr = document.createElement('iframe');
+        ifr.src = landingUrl;
+        ifr.style.display = 'none';
+        document.body.appendChild(ifr);
+        window.setTimeout(() => {
+          document.body.removeChild(ifr);
+          // Link to the App Store should go here -- only fires if deep link fails
+          window.open(fallbackUrl);
+        }, 600);
+      } else {
+        try {
+          window.open(landingUrl);
+        } catch (e) {};
+      }
+    }
+
+    function handleClick() {
+      clickTracks();
+      landing();
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+      bindTouchEvent(document.body, handleClick);
+    });
+
+    document.addEventListener("unload", function () {
+      removeTouchListener(document.body, handleClick);
+    });
+
+    function loadImage() {
+      var container = document.querySelector(".container");
+      var image = imageLoader(window._image_url_, impTracks);
+      image.style.width = '100%';
+      image.style.height = '100%';
+      container.appendChild(image);
+    }
+
+    loadImage();
+  </script>
+</body>
+
+</html>
